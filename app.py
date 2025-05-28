@@ -19,20 +19,13 @@ st.set_page_config(
 )
 st.header('Assistente de Estoque')
 
-model_options = [
-    'gpt-3.5-turbo',
-    'gpt-4',
-    'gpt-4-turbo',
-    'gpt-4o-mini',
-    'gpt-4o',
-]
-selected_model = st.sidebar.selectbox(
-    label='Selecione o modelo LLM',
-    options=model_options,
-)
+# Modelo fixo automático - GPT-4o-mini (equilibrio entre performance e custo)
+selected_model = 'gpt-4o-mini'
 
 st.sidebar.markdown('### Sobre')
-st.sidebar.markdown('Este agente consulta um banco de dados de estoque utilizando um modelo GPT.')
+st.sidebar.markdown('Este agente consulta um banco de dados de estoque utilizando GPT-4o-mini.')
+st.sidebar.markdown('### Modelo')
+st.sidebar.markdown(f'**Modelo ativo:** {selected_model}')
 
 st.write('Faça perguntas sobre o estoque de produtos, preços e reposições.')
 user_question = st.text_input('O que deseja saber sobre o estoque?')
