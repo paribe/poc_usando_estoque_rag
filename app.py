@@ -14,44 +14,30 @@ from langchain_groq import ChatGroq
 os.environ['GROQ_API_KEY'] = config('GROQ_API_KEY')
 
 st.set_page_config(
-    page_title='Estoque GPT - GROQ',
-    page_icon='⚡',
+    page_title='Assistente de Estoque',
+    page_icon='📄',
 )
-st.header('Assistente de Estoque - GROQ')
+st.header('Assistente de Estoque')
 
-# Modelos disponíveis no GROQ (muito mais rápidos!)
-groq_models = [
-    'llama3-8b-8192',      # Llama 3 8B - Rápido e eficiente
-    'llama3-70b-8192',     # Llama 3 70B - Mais potente
-    'mixtral-8x7b-32768',  # Mixtral - Ótimo para tarefas complexas
-    'gemma-7b-it',         # Gemma 7B - Google
-]
-
-# Modelo padrão recomendado para análise de dados
+# Modelo otimizado para SQL
 selected_model = 'llama3-8b-8192'
 
-st.sidebar.markdown('### ⚡ Powered by GROQ')
-st.sidebar.markdown('**Velocidade ultra-rápida de inferência!**')
-st.sidebar.markdown(f'**Modelo ativo:** {selected_model}')
-st.sidebar.markdown('**Provider:** GROQ Lightning Fast AI')
-
 st.write('Faça perguntas sobre o estoque de produtos, preços e reposições.')
-st.info('🚀 Agora com velocidade GROQ - respostas em segundos!')
 
 user_question = st.text_input('O que deseja saber sobre o estoque?')
 
-# Inicializar modelo GROQ
+# Inicializar modelo GROQ com configurações otimizadas
 model = ChatGroq(
     groq_api_key=os.environ['GROQ_API_KEY'],
     model_name=selected_model,
-    temperature=0,  # Para respostas mais consistentes em análise de dados
-    max_tokens=1024
+    temperature=0.1,
+    max_tokens=2048,
+    timeout=60
 )
 
 # Conectar ao banco de dados
 try:
     db = SQLDatabase.from_uri('sqlite:///estoque.db')
-    st.sidebar.success("✅ Banco conectado")
 except Exception as e:
     st.error(f"❌ Erro ao conectar banco: {e}")
     st.stop()
@@ -80,71 +66,93 @@ agent = create_react_agent(
 agent_executor = AgentExecutor(
     agent=agent,
     tools=toolkit.get_tools(),
-    verbose=True,
-    max_iterations=5,  # Limitar iterações para velocidade
+    verbose=False,  # Removido verbose para não mostrar logs
+    max_iterations=10,
+    max_execution_time=120,
     handle_parsing_errors=True
 )
 
-# Template de prompt otimizado para GROQ
+# Template de prompt mais específico
 prompt = '''
-Utilize os recursos disponíveis para atender consultas sobre o inventário da empresa. 
-Você deve oferecer análises detalhadas sobre mercadorias, valores, necessidades de 
-reabastecimento e documentos solicitados pelos usuários.
-Apresente suas respostas de forma clara e organizada para facilitar a compreensão.
-Comunique-se exclusivamente em idioma português do Brasil.
+Você é um especialista em análise de estoque. Use as ferramentas SQL disponíveis para responder perguntas sobre inventário.
 
-IMPORTANTE: Seja direto e objetivo nas consultas SQL. Use GROQ's speed advantage!
+INSTRUÇÕES IMPORTANTES:
+1. Seja direto e eficiente nas consultas SQL
+2. Se uma consulta falhar, tente uma abordagem mais simples
+3. Sempre formate a resposta final em português brasileiro
+4. Forneça apenas a resposta final, sem explicar o processo
+5. Não mencione detalhes técnicos sobre a execução da query
 
-Pergunta: {q}
+Pergunta do usuário: {q}
+
+Analise a pergunta e execute as consultas necessárias para dar uma resposta completa.
 '''
 prompt_template = PromptTemplate.from_template(prompt)
 
 # Interface de consulta
-if st.button('⚡ Consultar com GROQ'):
+if st.button('Consultar'):
     if user_question:
-        with st.spinner('🚀 Consultando com velocidade GROQ...'):
+        with st.spinner('Consultando o banco de dados...'):
             try:
                 formatted_prompt = prompt_template.format(q=user_question)
                 
-                # Medir tempo de resposta
-                import time
-                start_time = time.time()
+                # Executar consulta
+                try:
+                    result = agent_executor.invoke({
+                        'input': formatted_prompt
+                    })
+                    
+                    # Processar e limpar a resposta
+                    if 'output' in result:
+                        response = result['output']
+                        
+                        # Remover mensagens técnicas indesejadas
+                        unwanted_phrases = [
+                            "Note: The query executed successfully",
+                            "The results show that",
+                            "executed successfully and returned",
+                            "The query was executed",
+                            "successfully executed"
+                        ]
+                        
+                        for phrase in unwanted_phrases:
+                            if phrase in response:
+                                # Dividir por pontos e manter apenas a parte relevante
+                                sentences = response.split('.')
+                                cleaned_sentences = []
+                                for sentence in sentences:
+                                    if not any(unwanted in sentence for unwanted in unwanted_phrases):
+                                        cleaned_sentences.append(sentence)
+                                response = '. '.join(cleaned_sentences).strip()
+                                if response and not response.endswith('.'):
+                                    response += '.'
+                        
+                        # Exibir apenas a resposta limpa
+                        if response:
+                            st.markdown(response)
+                        else:
+                            st.warning("Não foi possível obter uma resposta clara.")
+                    else:
+                        st.warning("⚠️ Formato de resposta inesperado")
                 
-                output = agent_executor.invoke({'input': formatted_prompt})
-                
-                end_time = time.time()
-                response_time = end_time - start_time
-                
-                # Exibir resultado
-                st.markdown(output.get('output'))
-                
-                # Mostrar estatísticas de performance
-                st.sidebar.markdown('### 📊 Performance')
-                st.sidebar.metric("Tempo de resposta", f"{response_time:.2f}s")
-                st.sidebar.markdown(f"**Modelo:** {selected_model}")
+                except Exception as agent_error:
+                    # Tentar consulta direta mais simples
+                    try:
+                        # Consulta SQL direta para casos simples
+                        if "vende mais" in user_question.lower():
+                            direct_query = "SELECT * FROM produtos ORDER BY vendas DESC LIMIT 5"
+                        elif "estoque" in user_question.lower():
+                            direct_query = "SELECT * FROM produtos WHERE quantidade > 0 LIMIT 10"
+                        else:
+                            direct_query = "SELECT * FROM produtos LIMIT 5"
+                        
+                        result = db.run(direct_query)
+                        st.text(result)
+                        
+                    except Exception as direct_error:
+                        st.error(f"❌ Erro: {direct_error}")
                 
             except Exception as e:
-                st.error(f"❌ Erro durante consulta: {e}")
-                st.info("💡 Verifique se a GROQ_API_KEY está configurada corretamente")
+                st.error(f"❌ Erro: {e}")
     else:
         st.warning('Por favor, insira uma pergunta.')
-
-# Informações adicionais sobre GROQ
-with st.expander("ℹ️ Sobre GROQ vs OpenAI"):
-    st.markdown("""
-    **🚀 Vantagens do GROQ:**
-    - ⚡ **Velocidade**: 10-100x mais rápido que OpenAI
-    - 💰 **Custo**: Significativamente mais barato
-    - 🔓 **Open Source**: Modelos Llama, Mixtral, Gemma
-    - 🎯 **Especializado**: Hardware otimizado para inferência
-    
-    **🎯 Ideal para:**
-    - Aplicações que precisam de resposta rápida
-    - Prototipagem e desenvolvimento
-    - Aplicações com muitas consultas
-    - Análise de dados em tempo real
-    """)
-
-# Nota sobre configuração
-st.markdown("---")
-st.caption("💡 Configure sua GROQ_API_KEY no arquivo .env para usar este assistente")
