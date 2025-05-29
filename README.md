@@ -6,6 +6,10 @@ Um assistente inteligente para consultas de estoque utilizando GPT e banco de da
 
 O Estoque GPT é uma aplicação web construída com Streamlit que permite fazer consultas em linguagem natural sobre dados de estoque. Utilizando modelos GPT da OpenAI e LangChain, o sistema converte perguntas em português para consultas SQL e fornece respostas formatadas de forma amigável.
 
+![alt text](image-5.png)
+
+
+
 ## 🚀 Funcionalidades
 
 - **Consultas em linguagem natural**: Faça perguntas sobre estoque sem precisar conhecer SQL
@@ -176,3 +180,20 @@ Se você encontrar algum problema ou tiver dúvidas:
 - [ ] Histórico de consultas
 - [ ] Gráficos e visualizações
 - [ ] Autenticação de usuários
+
+
+## Evidências
+
+
+
+![alt text](image-1.png)
+
+![alt text](image-2.png)
+
+![alt text](image-3.png)
+
+![alt text](image-6.png)
+
+acesso ao banco de dados :
+
+![alt text](image-4.png)
