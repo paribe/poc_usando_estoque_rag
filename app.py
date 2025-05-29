@@ -22,11 +22,6 @@ st.header('Assistente de Estoque')
 # Modelo fixo automático - GPT-4o-mini (equilibrio entre performance e custo)
 selected_model = 'gpt-4o-mini'
 
-st.sidebar.markdown('### Sobre')
-st.sidebar.markdown('Este agente consulta um banco de dados de estoque utilizando GPT-4o-mini.')
-st.sidebar.markdown('### Modelo')
-st.sidebar.markdown(f'**Modelo ativo:** {selected_model}')
-
 st.write('Faça perguntas sobre o estoque de produtos, preços e reposições.')
 user_question = st.text_input('O que deseja saber sobre o estoque?')
 
@@ -54,11 +49,11 @@ agent_executor = AgentExecutor(
 )
 
 prompt = '''
-Use as ferramentas necessárias para responder perguntas relacionadas ao
-estoque de produtos. Você fornecerá insights sobre produtos, preços, 
-reposição de estoque e relatórios conforme solicitado pelo usuário.
-A resposta final deve ter uma formatação amigável de visualização para o usuário.
-Sempre responda em português brasileiro.
+Utilize os recursos disponíveis para atender consultas sobre o inventário da empresa. 
+Você deve oferecer análises detalhadas sobre mercadorias, valores, necessidades de 
+reabastecimento e documentos solicitados pelos usuários.
+Apresente suas respostas de forma clara e organizada para facilitar a compreensão.
+Comunique-se exclusivamente em idioma português do Brasil.
 Pergunta: {q}
 '''
 prompt_template = PromptTemplate.from_template(prompt)
